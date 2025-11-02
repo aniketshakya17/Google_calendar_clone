@@ -86,7 +86,7 @@ app.get('/', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(PORT, () => {
-  console.log(`\n✅ Server is running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📍 API Base: http://localhost:${PORT}/api\n`);
+  console.log(`\n Server is running on port ${PORT}`);
+  console.log(` Health check: http://localhost:${PORT}/api/health`);
+  console.log(` API Base: http://localhost:${PORT}/api\n`);
 });
