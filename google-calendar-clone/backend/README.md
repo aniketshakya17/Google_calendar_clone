@@ -179,4 +179,3 @@ backend/
 
 ---
 
-**Backend is ready to use with MongoDB Atlas!** 🚀
