@@ -1,52 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import {
-  HiOutlineMenuAlt2,
-  HiOutlineMenuAlt4,
-  HiOutlineUsers,
-} from 'react-icons/hi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IoCloseSharp } from 'react-icons/io5';
-import { IoMdCalendar } from 'react-icons/io';
-import { FiClock } from 'react-icons/fi';
-import AddTime from './add-time';
+import { HiOutlineMenuAlt2, HiOutlineUsers, HiOutlineMenuAlt4 } from 'react-icons/hi';
 import { api } from '../lib/api';
 import { useEventStore } from '../lib/store';
 
 export default function EventPopover({ isOpen, onClose, date }) {
   const popoverRef = useRef(null);
-  const [selectedTime, setSelectedTime] = useState('00:00');
+  const [eventDateTime, setEventDateTime] = useState(dayjs(date).format('YYYY-MM-DDTHH:mm'));
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { refreshEvents } = useEventStore();
 
+  // Close popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target)
-      ) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
         onClose();
       }
     };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
-
-  const handleClose = (e) => {
-    e.stopPropagation();
-    onClose();
-  };
-
-  const handlePopoverClick = (e) => {
-    e.stopPropagation();
-  };
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -57,121 +34,138 @@ export default function EventPopover({ isOpen, onClose, date }) {
     const formData = new FormData(e.target);
     const title = formData.get('title');
     const description = formData.get('description');
-    const eventDate = formData.get('date');
-    const time = formData.get('time');
+    const datetime = formData.get('datetime');
 
     try {
       await api.createEvent({
         title,
         description,
-        date: eventDate,
-        time,
+        date: datetime,
       });
       setSuccess(true);
       refreshEvents();
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      setTimeout(() => onClose(), 1500);
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-      style={{ zIndex: 1050, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-      onClick={handleClose}
-    >
-      <div
-        ref={popoverRef}
-        className="bg-white rounded shadow-lg w-100"
-        style={{ maxWidth: '500px' }}
-        onClick={handlePopoverClick}
-      >
-        <div className="d-flex align-items-center justify-content-between bg-light rounded-top p-2">
-          <HiOutlineMenuAlt4 />
-          <button
-            className="btn btn-sm btn-link p-1"
-            type="button"
-            onClick={handleClose}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            zIndex: 1050,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(5px)',
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            ref={popoverRef}
+            className="bg-white rounded-4 shadow-lg p-4 w-100"
+            style={{ maxWidth: '500px' }}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{
+              duration: 0.25,
+              type: 'spring',
+              stiffness: 150,
+              damping: 20,
+            }}
           >
-            <IoCloseSharp size={16} />
-          </button>
-        </div>
-        <form className="p-4" onSubmit={onSubmit}>
-          <div className="mb-3">
-            <input
-              type="text"
-              name="title"
-              className="form-control form-control-lg border-0 border-bottom rounded-0 fs-4"
-              placeholder="Add title"
-              style={{ borderBottom: '2px solid transparent !important' }}
-              onFocus={(e) => (e.target.style.borderBottomColor = '#0d6efd')}
-              onBlur={(e) => (e.target.style.borderBottomColor = 'transparent')}
-              required
-            />
-          </div>
-          <div className="d-flex gap-2 mb-3">
-            <button className="btn btn-light text-primary" type="button">
-              Event
-            </button>
-            
-           
-          </div>
-
-          <div className="d-flex align-items-center gap-3 mb-3">
-            <FiClock size={20} className="text-muted" />
-            <div className="d-flex align-items-center gap-3 small">
-              <p className="mb-0">{dayjs(date).format('dddd, MMMM D')}</p>
-              <AddTime onTimeSelect={setSelectedTime} />
-              <input type="hidden" name="date" value={date} />
-              <input type="hidden" name="time" value={selectedTime} />
+            {/* Header */}
+            <div className="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <HiOutlineMenuAlt4 size={20} className="text-primary" />
+                <h5 className="mb-0 fw-semibold">Add Event</h5>
+              </div>
+              <button
+                className="btn btn-sm btn-light rounded-circle"
+                type="button"
+                onClick={onClose}
+              >
+                <IoCloseSharp size={18} />
+              </button>
             </div>
-          </div>
 
-          <div className="d-flex align-items-center gap-3 mb-3">
-            <HiOutlineUsers size={20} className="text-muted" />
-            <input
-              type="text"
-              name="guests"
-              className="form-control bg-light border-0"
-              placeholder="Add guests"
-            />
-          </div>
+            {/* Form */}
+            <form onSubmit={onSubmit}>
+              {/* Title */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  name="title"
+                  className="form-control form-control-lg border-2 rounded-3"
+                  placeholder="Event title"
+                  required
+                />
+              </div>
 
-          <div className="d-flex align-items-center gap-3 mb-3">
-            <HiOutlineMenuAlt2 size={20} className="text-muted" />
-            <input
-              type="text"
-              name="description"
-              className="form-control bg-light border-0"
-              placeholder="Add description"
-              required
-            />
-          </div>
+              {/* Date and Time Picker */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Date & Time:</label>
+                <input
+                  type="datetime-local"
+                  name="datetime"
+                  value={eventDateTime}
+                  onChange={(e) => setEventDateTime(e.target.value)}
+                  className="form-control border-2 rounded-3"
+                  required
+                />
+              </div>
 
+              {/* Guests */}
+              <div className="d-flex align-items-center gap-3 mb-3">
+                <HiOutlineUsers size={20} className="text-muted" />
+                <input
+                  type="text"
+                  name="guests"
+                  className="form-control bg-light border-0 rounded-3"
+                  placeholder="Add guests (optional)"
+                />
+              </div>
 
+              {/* Description */}
+              <div className="d-flex align-items-center gap-3 mb-4">
+                <HiOutlineMenuAlt2 size={20} className="text-muted" />
+                <input
+                  type="text"
+                  name="description"
+                  className="form-control bg-light border-0 rounded-3"
+                  placeholder="Add description"
+                />
+              </div>
 
-          <div className="d-flex justify-content-end gap-2">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+              {/* Buttons */}
+              <div className="d-flex justify-content-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
 
-          {error && <p className="text-danger mt-2">{error}</p>}
-          {success && <p className="text-success mt-2">Success!</p>}
-        </form>
-      </div>
-    </div>
+              {/* Feedback */}
+              {error && <p className="text-danger mt-3 small">{error}</p>}
+              {success && <p className="text-success mt-3 small">Event saved!</p>}
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
-
